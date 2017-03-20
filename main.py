@@ -1,7 +1,6 @@
 import numpy as np
 import pandas as pd
-import builtins
-from collections import defaultdict
+import pylab
 import os
 
 def load_train_data():
@@ -137,9 +136,104 @@ def load_train_data():
     del dataset['salary']
     return dataset
 
-train_data = load_train_data().as_matrix()
+def sigmoid(s):
+    return 1.0/(1.0+np.exp(-s))
 
-#train_data.to_csv('stuff.csv')
+def sigmoid_gradient(s):
+    return sigmoid(s) * (1-sigmoid(s))
 
-print(train_data[0,1])
+def train_nn(X,y,Theta1,Theta2,l,rate):
+    print('train\n')
+    m = len(X[:,1])
+    X = np.append(np.ones(m).reshape(m,1),X,axis=1)
+    z1 = sigmoid(np.dot(X,np.transpose(initial_Theta1)))
+    z1 = np.append(np.ones(m).reshape(m,1),z1,axis=1)
+    fz = np.dot(z1,np.transpose(initial_Theta2))
+
+    J = 0
+    for i in range(0,m):
+        J+= y[i]*np.log(sigmoid(fz[i])) + (1-y[i])*np.log(sigmoid(fz[i]))
+    J /= m
+
+    #J = J +
+    ###########################
+    Del1 = np.zeros(shape=(len(Theta1[:,0]),len(Theta1[0,:])))
+    Del2 = np.zeros(shape=(len(Theta2[:,0]),len(Theta2[0,:])))
+    #Theta1_grad = np.zeros(np.initial_Theta1.size())
+    #Theta2_grad = np.zeros(np.initial_Theta2.size())
+
+    for i in range(0,m):
+
+        #Step 1
+        z = np.dot(initial_Theta1,np.transpose(X[i,:]))
+        layer1 = sigmoid(z)
+        layer1 = np.append(np.ones(1),layer1,axis=0)
+        Olayer = sigmoid(np.dot(Theta2,layer1))
+        #print(Olayer)
+
+        #Step 2
+        delta3 = abs(Olayer - y[i])
+
+        #Step 3
+        delta2 = np.dot(np.transpose(Theta2),delta3) * sigmoid_gradient(np.append(np.ones(1),z,axis=0))
+        #print(delta2)
+        delta2=delta2[1:]
+
+        #Step4
+        Del1 = Del1 + np.outer(delta2,X[i,:])
+        #print(len(Del2[:,0]),len(Del2[0,:]))
+        #print()
+        Del2 = Del2 + delta3 * np.transpose(layer1)
+
+    Theta1_grad = (Del1 + l * Theta1)/m
+    Theta2_grad = (Del2 + l * Theta2)/m
+
+    Theta1_grad[:,1] = Del1[:,1]/m
+    Theta2_grad[:,1] = Del2[:,1]/m
+
+    Theta1 = Theta1 - rate * Theta1_grad
+    Theta2 = Theta2 - rate * Theta2_grad
+
+    return [Theta1,Theta2,J]
+
+def predict(Theta1,Theta2,X):
+    m = len(X[:,1])
+    h1 = sigmoid(np.dot(np.append(np.ones(m).reshape(m,1),X,axis=1), np.transpose(Theta1)))
+    p = sigmoid(np.dot(np.append(np.ones(m).reshape(m,1),h1,axis=1), np.transpose(Theta2)))
+    p = np.ceil(p - 0.5)
+    return p
+
+
+train_data = load_train_data()
+y = train_data['Salary'].as_matrix()
+del train_data['Salary']
+X = train_data.as_matrix()
+parameters = len(X[0,:])
+m = len(X[:,1])
+hidden_layer = 50
+iterations = 20
+l=0 #lambda
+rate = 0.01
+
+initial_Theta1 = np.random.rand(hidden_layer,parameters)
+initial_Theta1 = np.append(np.ones(hidden_layer).reshape(hidden_layer,1),initial_Theta1,axis=1)
+initial_Theta2 = np.random.rand(1,hidden_layer)
+initial_Theta2 = np.append(np.ones(1).reshape(1,1),initial_Theta2,axis=1)
+
+Cost = np.empty(0)
+x = np.empty(0)
+#pylab.plot(y,Cost)
+for i in range(0,iterations):
+    [initial_Theta1,initial_Theta2,J] = train_nn(X,y,initial_Theta1,initial_Theta2,l,rate)
+    Cost = np.append(Cost,J)
+    x = np.append(x,i)
+    print(i,J)
+
+print(Cost)
+
+p=predict(initial_Theta1,initial_Theta2,X)
+
+print('Accuracy ', (sum(p)/sum(y)))
+#print(len(50),len(Cost))
+pylab.plot(x,Cost)
 
