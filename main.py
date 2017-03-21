@@ -1,8 +1,11 @@
 import numpy as np
 import pandas as pd
-import pylab
+import matplotlib.pyplot as plt
+import math
+import random
 import os
 
+#Loading training set and filtering data
 def load_train_data():
     file_dir = os.path.dirname(__file__)
     file_path= os.path.join(file_dir,'data/train.csv')
@@ -136,53 +139,52 @@ def load_train_data():
     del dataset['salary']
     return dataset
 
+#Sigmoid function
 def sigmoid(s):
     return 1.0/(1.0+np.exp(-s))
 
+#Derivative of Sigmoid function
 def sigmoid_gradient(s):
     return sigmoid(s) * (1-sigmoid(s))
 
+#Training neural network
 def train_nn(X,y,Theta1,Theta2,l,rate):
-    print('train\n')
     m = len(X[:,1])
-    X = np.append(np.ones(m).reshape(m,1),X,axis=1)
-    z1 = sigmoid(np.dot(X,np.transpose(initial_Theta1)))
-    z1 = np.append(np.ones(m).reshape(m,1),z1,axis=1)
-    fz = np.dot(z1,np.transpose(initial_Theta2))
 
+    ###########Feed Forward for Cost Calculation##################
+    X = np.append(np.ones(m).reshape(m,1),X,axis=1)
+    hidden_layer_prediction = sigmoid(np.dot(X,np.transpose(initial_Theta1)))
+    hidden_layer_prediction = np.append(np.ones(m).reshape(m,1),hidden_layer_prediction,axis=1)
+    fz = np.dot(hidden_layer_prediction,np.transpose(initial_Theta2))
+
+    ############# Calculating cost iteratively as vectorizing it gives MemoryError################
     J = 0
     for i in range(0,m):
         J+= y[i]*np.log(sigmoid(fz[i])) + (1-y[i])*np.log(sigmoid(fz[i]))
     J /= m
 
     #J = J +
-    ###########################
+    ########################### A single feedforward and Backpropagation step################
     Del1 = np.zeros(shape=(len(Theta1[:,0]),len(Theta1[0,:])))
     Del2 = np.zeros(shape=(len(Theta2[:,0]),len(Theta2[0,:])))
-    #Theta1_grad = np.zeros(np.initial_Theta1.size())
-    #Theta2_grad = np.zeros(np.initial_Theta2.size())
 
-    for i in range(0,m):
-
+    for i in range(0,1):
+        i = random.randint(0,m-1)
         #Step 1
         z = np.dot(initial_Theta1,np.transpose(X[i,:]))
         layer1 = sigmoid(z)
         layer1 = np.append(np.ones(1),layer1,axis=0)
         Olayer = sigmoid(np.dot(Theta2,layer1))
-        #print(Olayer)
 
         #Step 2
         delta3 = abs(Olayer - y[i])
 
         #Step 3
         delta2 = np.dot(np.transpose(Theta2),delta3) * sigmoid_gradient(np.append(np.ones(1),z,axis=0))
-        #print(delta2)
         delta2=delta2[1:]
 
         #Step4
         Del1 = Del1 + np.outer(delta2,X[i,:])
-        #print(len(Del2[:,0]),len(Del2[0,:]))
-        #print()
         Del2 = Del2 + delta3 * np.transpose(layer1)
 
     Theta1_grad = (Del1 + l * Theta1)/m
@@ -194,46 +196,64 @@ def train_nn(X,y,Theta1,Theta2,l,rate):
     Theta1 = Theta1 - rate * Theta1_grad
     Theta2 = Theta2 - rate * Theta2_grad
 
-    return [Theta1,Theta2,J]
+    return [Theta1,Theta2,-J]
 
-def predict(Theta1,Theta2,X):
+#prediction function given threshold of 0.5
+def predict(Theta1,Theta2,X,y):
     m = len(X[:,1])
     h1 = sigmoid(np.dot(np.append(np.ones(m).reshape(m,1),X,axis=1), np.transpose(Theta1)))
-    p = sigmoid(np.dot(np.append(np.ones(m).reshape(m,1),h1,axis=1), np.transpose(Theta2)))
-    p = np.ceil(p - 0.5)
-    return p
+    h2 = sigmoid(np.dot(np.append(np.ones(m).reshape(m,1),h1,axis=1), np.transpose(Theta2)))
+    threshold=0.5
+    p=0
+    for i in range(0,m):
+        if(y[i]==0 and p<threshold):
+            p+=1
+        if(y[i]==1 and p>=threshold):
+            p+=1
+    return 100*p/m
 
 
 train_data = load_train_data()
-y = train_data['Salary'].as_matrix()
+y = train_data['Salary'].as_matrix()    ##True labels
 del train_data['Salary']
-X = train_data.as_matrix()
-parameters = len(X[0,:])
-m = len(X[:,1])
-hidden_layer = 50
-iterations = 20
-l=0 #lambda
-rate = 0.01
+X = train_data.as_matrix()              ##Parameter matrix
+parameters = len(X[0,:])                ##Number of parameters
+m = len(X[:,1])                         ##Number of training examples
+hidden_layer = 50                       ##hidden layer size
+iterations = math.ceil(m/390)                         ##Setting number of iterations
+l=0                                     ##lambda for regularisation
+rate = 0.03                          ##Learning rate
 
-initial_Theta1 = np.random.rand(hidden_layer,parameters)
+#for rate in 0.0003,0.0001,0.00003,0.00001:
+#initial_Theta1 = np.random.rand(hidden_layer,parameters)
+initial_Theta1 = np.zeros(shape=(hidden_layer,parameters))
 initial_Theta1 = np.append(np.ones(hidden_layer).reshape(hidden_layer,1),initial_Theta1,axis=1)
-initial_Theta2 = np.random.rand(1,hidden_layer)
+#initial_Theta2 = np.random.rand(1,hidden_layer)
+initial_Theta2 = np.zeros(shape=(1,hidden_layer))
 initial_Theta2 = np.append(np.ones(1).reshape(1,1),initial_Theta2,axis=1)
+p=predict(initial_Theta1,initial_Theta2,X,y)
+print('Accuracy : ', p,'%')
 
 Cost = np.empty(0)
 x = np.empty(0)
-#pylab.plot(y,Cost)
 for i in range(0,iterations):
     [initial_Theta1,initial_Theta2,J] = train_nn(X,y,initial_Theta1,initial_Theta2,l,rate)
+    '''if(i!=0 and J > Cost[i-1] ):
+        rate *= 0.3
+    else:
+        rate *= 3'''
     Cost = np.append(Cost,J)
     x = np.append(x,i)
     print(i,J)
 
 print(Cost)
 
-p=predict(initial_Theta1,initial_Theta2,X)
+p=predict(initial_Theta1,initial_Theta2,X,y)
+print(initial_Theta1)
+print(initial_Theta2)
+print('Accuracy : ', p,'%')
+plt.plot(x,Cost,label=hidden_layer)
 
-print('Accuracy ', (sum(p)/sum(y)))
-#print(len(50),len(Cost))
-pylab.plot(x,Cost)
+
+plt.show()
 
