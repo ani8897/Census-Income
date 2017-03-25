@@ -153,49 +153,71 @@ def train_nn(X,y,Theta1,Theta2,l,rate):
 
     ###########Feed Forward for Cost Calculation##################
     X = np.append(np.ones(m).reshape(m,1),X,axis=1)
-    hidden_layer_prediction = sigmoid(np.dot(X,np.transpose(initial_Theta1)))
+    hidden_layer_prediction = sigmoid(np.dot(X,np.transpose(Theta1)))
     hidden_layer_prediction = np.append(np.ones(m).reshape(m,1),hidden_layer_prediction,axis=1)
-    fz = np.dot(hidden_layer_prediction,np.transpose(initial_Theta2))
+    fz = np.dot(hidden_layer_prediction,np.transpose(Theta2))
 
     ############# Calculating cost iteratively as vectorizing it gives MemoryError################
     J = 0
     for i in range(0,m):
         J+= y[i]*np.log(sigmoid(fz[i])) + (1-y[i])*np.log(sigmoid(fz[i]))
-    J /= m
+
 
     #J = J +
     ########################### A single feedforward and Backpropagation step################
     Del1 = np.zeros(shape=(len(Theta1[:,0]),len(Theta1[0,:])))
     Del2 = np.zeros(shape=(len(Theta2[:,0]),len(Theta2[0,:])))
 
-    for i in range(0,1):
+    #print(Theta1)
+    #print(Theta2)
+    for i in range(0,2):
         i = random.randint(0,m-1)
         #Step 1
-        z = np.dot(initial_Theta1,np.transpose(X[i,:]))
+        z = np.dot(Theta1,np.transpose(X[i,:]))
         layer1 = sigmoid(z)
         layer1 = np.append(np.ones(1),layer1,axis=0)
         Olayer = sigmoid(np.dot(Theta2,layer1))
 
+        ##############################
+        #print("layer 1",layer1)
+        #print("Olayer",Olayer)
+        ##############################
+
         #Step 2
-        delta3 = abs(Olayer - y[i])
+        delta3 = y[i] - Olayer
+
+        ##############################
+        #print("delta 3",delta3)
+        ##############################
 
         #Step 3
         delta2 = np.dot(np.transpose(Theta2),delta3) * sigmoid_gradient(np.append(np.ones(1),z,axis=0))
         delta2=delta2[1:]
 
+        ##############################
+        #print("delta 2",delta2)
+        ##############################
+
         #Step4
         Del1 = Del1 + np.outer(delta2,X[i,:])
         Del2 = Del2 + delta3 * np.transpose(layer1)
 
+        ##############################
+        #print("Del1",Del1)
+        #print("Del2",Del2)
+        ##############################
+
+
     Theta1_grad = (Del1 + l * Theta1)/m
     Theta2_grad = (Del2 + l * Theta2)/m
 
-    Theta1_grad[:,1] = Del1[:,1]/m
-    Theta2_grad[:,1] = Del2[:,1]/m
+    #Theta1_grad[:,1] = Del1[:,1]/m
+    #Theta2_grad[:,1] = Del2[:,1]/m
 
     Theta1 = Theta1 - rate * Theta1_grad
     Theta2 = Theta2 - rate * Theta2_grad
 
+    #print(Theta1)
     return [Theta1,Theta2,-J]
 
 #prediction function given threshold of 0.5
@@ -206,10 +228,11 @@ def predict(Theta1,Theta2,X,y):
     threshold=0.5
     p=0
     for i in range(0,m):
-        if(y[i]==0 and p<threshold):
+        if(y[i]==0 and h2[i]<threshold):
             p+=1
-        if(y[i]==1 and p>=threshold):
+        if(y[i]==1 and h2[i]>=threshold):
             p+=1
+        #p += abs(y[i]-h2[i])
     return 100*p/m
 
 
@@ -220,9 +243,9 @@ X = train_data.as_matrix()              ##Parameter matrix
 parameters = len(X[0,:])                ##Number of parameters
 m = len(X[:,1])                         ##Number of training examples
 hidden_layer = 50                       ##hidden layer size
-iterations = math.ceil(m/390)                         ##Setting number of iterations
+iterations = 100                       ##Setting number of iterations
 l=0                                     ##lambda for regularisation
-rate = 0.03                          ##Learning rate
+rate = 0.0003                          ##Learning rate
 
 #for rate in 0.0003,0.0001,0.00003,0.00001:
 #initial_Theta1 = np.random.rand(hidden_layer,parameters)
@@ -238,15 +261,15 @@ Cost = np.empty(0)
 x = np.empty(0)
 for i in range(0,iterations):
     [initial_Theta1,initial_Theta2,J] = train_nn(X,y,initial_Theta1,initial_Theta2,l,rate)
-    '''if(i!=0 and J > Cost[i-1] ):
+    if(i!=0 and J > Cost[i-1] ):
         rate *= 0.3
     else:
-        rate *= 3'''
+        rate *= 3
     Cost = np.append(Cost,J)
     x = np.append(x,i)
     print(i,J)
 
-print(Cost)
+#print(Cost)
 
 p=predict(initial_Theta1,initial_Theta2,X,y)
 print(initial_Theta1)
@@ -256,4 +279,5 @@ plt.plot(x,Cost,label=hidden_layer)
 
 
 plt.show()
+
 
